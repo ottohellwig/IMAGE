@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Upload and Conversion</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container" id="mainContent">
+      <form id="uploadForm" enctype="multipart/form-data">
+        <h2>Upload Image</h2>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required />
+        <label for="files">Select image(s):</label>
+        <input type="file" id="files" name="files" multiple required />
+        <button type="submit">Upload</button>
+      </form>
+
+      <form id="convertForm">
+        <h2>Convert Image</h2>
+        <label for="key">Image Key:</label>
+        <input type="text" id="key" name="key" required />
+        <label for="format">Convert to format:</label>
+        <select id="format" name="format" required>
+          <option value="png">PNG</option>
+          <option value="jpeg">JPEG</option>
+          <option value="webp">WEBP</option>
+        </select>
+        <button type="submit">Convert</button>
+      </form>
+
+      <h1>Delete Image from S3</h1>
+      <form id="deleteForm">
+        <label for="filename">Filename:</label>
+        <input type="text" id="filename" name="filename" required>
+        <button type="submit">Delete</button>
+      </form>
+      <p id="message"></p>
+
+    <script>
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+      }
+
+      let authToken = getCookie("token") || "";
+
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const formData = new FormData(event.target);
+
+          try {
+            const response = await fetch("http://localhost:3000/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            const result = await response.json();
+            console.log(result);
+          } catch (error) {
+            console.error("Error uploading files:", error);
+          }
+        });
+
+      function updateFileDropdown(files) {
+        const fileDropdown = document.getElementById("fileDropdown");
+        files.forEach((file) => {
+          const option = document.createElement("option");
+          option.value = file.key;
+          option.textContent = file.name;
+          fileDropdown.appendChild(option);
+        });
+      }
+
+      document
+        .getElementById("convertForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const formData = new FormData(event.target);
+          try {
+            const response = await fetch("/images/convert", {
+              // Updated URL
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                key: formData.get("key"),
+                format: formData.get("format"),
+              }),
+            });
+            const result = await response.json();
+            alert(result.message);
+            if (response.ok) {
+              displayConvertedImage(`/path/to/converted/image/${result.key}`);
+            }
+          } catch (error) {
+            alert("Error converting image");
+          }
+        });
+
+
+      function displayConvertedImage(imagePath) {
+        const imageContainer = document.getElementById("imageContainer");
+        imageContainer.innerHTML = ""; // Clear any existing images
+        const img = document.createElement("img");
+        img.src = imagePath;
+        img.alt = "Converted Image";
+        imageContainer.appendChild(img);
+      }
+
+      function displayConvertedImage(imagePath) {
+        const imageContainer = document.getElementById("imageContainer");
+        imageContainer.innerHTML = ""; // Clear any existing images
+        const img = document.createElement("img");
+        img.src = imagePath;
+        img.alt = "Converted Image";
+        imageContainer.appendChild(img);
+      }
+
+      document.getElementById('deleteForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const filename = document.getElementById('filename').value;
+      const messageElement = document.getElementById('message');
+
+      try {
+        const response = await fetch('/images/delete-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filename }),
+        });
+
+        const result = await response.json();
+        messageElement.textContent = result.message;
+      } catch (error) {
+        messageElement.textContent = 'Error deleting image';
+      }
+    });
+
+      function displayConvertedImage(imagePath) {
+        const imageContainer = document.getElementById("imageContainer");
+        imageContainer.innerHTML = ""; // Clear any existing images
+        const img = document.createElement("img");
+        img.src = imagePath;
+        img.alt = "Converted Image";
+        imageContainer.appendChild(img);
+      }
+
+      function removeDeletedImage() {
+        const imageContainer = document.getElementById("imageContainer");
+        imageContainer.innerHTML = ""; // Clear the image container
+      }
+
+      async function displayUploadedImages() {
+        const response = await fetch("/uploads/metadata.json");
+        const metadata = await response.json();
+        const uploadedImagesDiv = document.getElementById("uploadedImages");
+        uploadedImagesDiv.innerHTML = "";
+        metadata.forEach((image) => {
+          const imgElement = document.createElement("img");
+          imgElement.src = image.filepath;
+          imgElement.alt = image.title;
+          imgElement.style.width = "200px";
+          imgElement.style.margin = "10px";
+          uploadedImagesDiv.appendChild(imgElement);
+        });
+      }
+
+      async function populateFileDropdowns() {
+        const response = await fetch("/images/list", {
+          headers: {
+            Authorization: `Bearer ${authToken}`, // Add the Authorization header
+          },
+        });
+        const files = await response.json();
+        const fileDropdown = document.getElementById("fileDropdown");
+        const deleteFileDropdown =
+          document.getElementById("deleteFileDropdown");
+        const jsonDisplay = document.getElementById("jsonDisplay");
+
+        fileDropdown.innerHTML = '<option value="">Select a file</option>';
+        deleteFileDropdown.innerHTML =
+          '<option value="">Select a file</option>';
+
+        files.forEach((file) => {
+          const option = document.createElement("option");
+          option.value = `uploads/${file}`;
+          option.textContent = file;
+          fileDropdown.appendChild(option);
+
+          const deleteOption = document.createElement("option");
+          deleteOption.value = file;
+          deleteOption.textContent = file;
+          deleteFileDropdown.appendChild(deleteOption);
+        });
+
+        // Display the JSON data
+        jsonDisplay.textContent = JSON.stringify(files, null, 2);
+      }
+    </script>
+  </body>
+</html>

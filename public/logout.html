@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logout</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Logout</h1>
+      <button id="logoutButton">Logout</button>
+      <div id="logoutMessage"></div>
+    </div>
+
+    <script>
+      document
+        .getElementById("logoutButton")
+        .addEventListener("click", async () => {
+          const response = await fetch("/users/logout", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const result = await response.json();
+          const logoutMessage = document.getElementById("logoutMessage");
+
+          if (response.ok) {
+            logoutMessage.textContent = "Logout successful!";
+          } else {
+            logoutMessage.textContent = "Logout failed: " + result.message;
+          }
+        });
+    </script>
+  </body>
+</html>
